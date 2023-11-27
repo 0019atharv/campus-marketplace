@@ -7,19 +7,20 @@ app.use(cors())
 const path = require('path');
 var jwt = require('jsonwebtoken');
 const multer  = require('multer')
+const upload = multer();
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads')
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    cb(null, file.fieldname + '-' + uniqueSuffix)
-  }
-})
+// const storage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     cb(null, 'uploads')
+//   },
+//   filename: function (req, file, cb) {
+//     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+//     cb(null, file.fieldname + '-' + uniqueSuffix)
+//   }
+// })
 
-const upload = multer({ storage: storage })
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// const upload = multer({ storage: storage })
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const bodyParser = require('body-parser')
 app.use(bodyParser.json());
@@ -27,7 +28,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 const mongoose = require('mongoose');
 
 // Connect to MongoDB
-mongoose.connect('mongodb://127.0.0.1:27017/CampusMarketplace', { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect('mongodb+srv://ak1824871:AO0vbLlIv4laVQJA@campus-marketplace.kg2xlqk.mongodb.net/?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true });
 
 // Create a Mongoose model
 const Users = mongoose.model('Users', {
@@ -46,7 +47,7 @@ const Users = mongoose.model('Users', {
         price:String,
          category:String,
           pimage:String,
-           pimage2:String, 
+          pimage2:String, 
           addedBy:mongoose.Schema.Types.ObjectId,
             userlocation:String,
             status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
@@ -178,17 +179,18 @@ app.post('/login', (req, res) => {
 
 // Add Product API
 
-app.post('/addproduct',upload.fields([{ name: 'pimage' },{ name: 'pimage2' }]),(req,res) =>{
+app.post('/addproduct', upload.none(), (req, res) => {
   console.log(req.body);
-  console.log(req.file);
+  
   const userlocation = req.body.userlocation;
   const pname = req.body.pname;
   const pdesc = req.body.pdesc;
   const price = req.body.price;
   const category = req.body.category;
-  const pimage = req.files.pimage[0].path;
-  const pimage2 = req.files.pimage2[0].path;
+  const pimage = req.body.pimage ;
+  const pimage2 = req.body.pimage2 ;
   const addedBy = req.body.userId;
+  console.log({userlocation, pname, pdesc, price, category, pimage, pimage2, addedBy});
   const product = new Products({userlocation, pname, pdesc, price, category, pimage, pimage2, addedBy});
   product.save()
     .then(() => {
@@ -241,7 +243,7 @@ app.get('/getproducts',(req,res) => {
 app.post ('/likedproducts',(req,res) => {
   Users.findOne({_id : req.body.userId}).populate('likedProducts')
   .then((result) => {
-    console.log(result)
+    // console.log(result)
     res.send({message:'success', products:result.likedProducts})
   })
   .catch((err) => {
@@ -251,11 +253,11 @@ app.post ('/likedproducts',(req,res) => {
 
 // Get Product Detail API
 app.get ('/getproduct/:pId',(req,res) => {
-  console.log(req.params);
-  Products.findOne( {_id : req.params.pId})
+  
+  Products.findOne( {_id : req.params.pId} )
   .then((result) => {
-    
-    res.send({message:'success', product:result})
+    console.log(result);
+    res.send({message:'success', product:result })
   })
   .catch((err) => {
     res.send({message:'server err'})
@@ -268,6 +270,7 @@ app.get('/getuser/:uId', (req, res) => {
   .then((result) => {
     
     res.send({message:'success', user:{
+      username:result.username,
       mobile:result.mobile,
       email:result.email,
       userlocation:result.userlocation}})
@@ -282,7 +285,7 @@ app.get('/myprofile/:userId', (req, res) => {
 
   Users.findOne({ _id: uid })
     .then((result) => {
-      console.log(result); // Move the console.log here
+      // console.log(result); // Move the console.log here
       res.send({
         message: 'success.',
         user: {
@@ -297,6 +300,36 @@ app.get('/myprofile/:userId', (req, res) => {
       res.send({ message: 'server err' });
     });
 });
+
+
+
+//Email Verification
+// const transporter = nodemailer.createTransport({
+//   service: 'gmail',
+//   auth: {
+//     user: 'your_email@gmail.com', // replace with your email
+//     pass: 'your_email_password', // replace with your email password
+//   },
+// });
+
+// app.post('/send-email', (req, res) => {
+//   const { to, subject, text } = req.body;
+
+//   const mailOptions = {
+//     from: 'your_email@gmail.com',
+//     to,
+//     subject,
+//     text,
+//   };
+
+//   transporter.sendMail(mailOptions, (error, info) => {
+//     if (error) {
+//       return res.status(500).send(error.toString());
+//     }
+//     res.status(200).send('Email sent: ' + info.response);
+//   });
+// });
+
 
 // Start the server
 app.listen(port, () => {
